@@ -1,4 +1,5 @@
 let currentToken = null;
+let currentAttribute = null; //属性
 
 function emit(token) {
     console.log(token);
@@ -67,14 +68,126 @@ function tagName(c) {
 function beforeAttributeName(c) {
     if (c.match(/^[\t\n\f ]$/)) {
         return beforeAttributeName;
-    } else if (c == ">") {
-        return data;
+    } else if (c == "/" || c == ">" || c == EOF) {
+        return afterAttributeName(c);
     } else if (c == "=") {
-        return beforeAttributeName;
+
     } else {
-        return beforeAttributeName;
+        currentAttribute = {
+            name: "",
+            value: ""
+        }
+        // 解析html属性
+        return attributeName(c);
     }
 }
+
+// 解析html属性
+function attributeName(c) {
+    if (c.match(/^[\t\n\f ]$/) || c == "/" || c == ">" || c == EOF) {
+        return afterAttributeName(c);
+    } else if (c == "=") {
+        return beforeAttributeValue;
+    } else if (c == "\u0000") {
+
+    } else if (c == "\"" || c == "'" || c == "<") {
+
+    } else {
+        currentAttribute.name += c;
+        return attributeName;
+    }
+}
+
+function beforeAttributeValue(c) {
+    if (c.match(/^[\t\n\f ]$/) || c == "/" || c == ">" || c == EOF) {
+        return beforeAttributeValue;
+    } else if (c == "\"") {
+        return doubleQuotedAttributeValue;
+    } else if (c == "\'") {
+        return singleQuotedAttributeValue;
+    } else if (c == ">") {
+        // return data;
+    } else {
+        return UnQuotedAttributeValue(c);
+    }
+}
+
+// 分析双引号属性
+function doubleQuotedAttributeValue(c) {
+    if (c == "\"") {
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        return afterQuotedAttributeValue;
+    } else if (c == "\u0000") {
+
+    } else if (c == EOF) {
+
+    } else {
+        currentAttribute.value += c;
+        return doubleQuotedAttributeValue;
+    }
+}
+
+// 分析单引号属性
+function singleQuotedAttributeValue(c) {
+    if (c == "\'") {
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        return afterQuotedAttributeValue;
+    } else if (c == "\u0000") {
+
+    } else if (c == EOF) {
+
+    } else {
+        currentAttribute.value += c;
+        return doubleQuotedAttributeValue;
+    }
+}
+
+// 分析无引号属性
+function UnQuotedAttributeValue(c) {
+    if (c.match(/^[\t\n\f ]$/)) {
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        return beforeAttributeValue;
+    } else if (c == "/") {
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        return selfClosingStartTag;
+    } else if (c == ">") {
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        emit(currentToken);
+        return data;
+    } else if (c == "\u0000") {
+
+    } else if (c == "\"" || c == "'" || c == "<" || c == "=" || c == "`") {
+
+    } else if (c == EOF) {
+
+    } else {
+        currentAttribute.value += c;
+        return UnQuotedAttributeValue;
+    }
+}
+
+function afterQuotedAttributeValue(c) {
+    if (c.match(/^[\t\n\f ]$/)) {
+        return beforeAttributeName;
+    } else if (c == "/") {
+        return selfClosingStartTag;
+    } else if (c == ">") {
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        emit(currentToken);
+        return data;
+    } else if (c == EOF) {
+
+    } else {
+        currentAttribute.value += c;
+        return doubleQuotedAttributeValue;
+    }
+}
+
+function afterAttributeName(c) {
+
+}
+
+
 
 function selfClosingStartTag(c) {
     if (c == ">") {
