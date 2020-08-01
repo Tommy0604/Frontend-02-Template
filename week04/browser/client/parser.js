@@ -1,35 +1,83 @@
 let currentToken = null;
-let currentAttribute = null; //属性
+let currentAttribute = null;
+
+let stack = [{ type: "document", children: [] }];
+let currentTextNode = null;
 
 function emit(token) {
-    console.log(token);
+    // if (token.type === "text") return;
+    let top = stack[stack.length - 1]; // 最后一个元素为栈顶
+
+    if (token.type === "startTag") {
+        let element = {
+            type: "element",
+            children: [],
+            attributes: [],
+        };
+        element.tagName = token.tagName;
+        for (let p in token) {
+            if (p != "type" && p != "tagName") {
+                element.attributes.push({
+                    name: p,
+                    value: token[p],
+                })
+            }
+        }
+
+        top.children.push(element);
+        element.parent = top;
+
+        if (!token.isSelfClosing) {
+            stack.push(element);
+        }
+        currentTextNode = null;
+    } else if ((token.type === "endTag")) {
+        if ((top.tagName !== token.tagName)) {
+            throw new Error("Tag start end dosen't match");
+        } else {
+            stack.pop();
+        }
+        currentTextNode = null;
+    } else if (token.type === "text") {
+        if (currentTextNode === null) {
+            currentTextNode = {
+                type: "text",
+                content: "",
+            }
+            top.children.push(currentTextNode);
+        }
+        currentTextNode.content += token.content;
+    }
 }
 
 const EOF = Symbol("EOF");
 
 function data(c) {
-    if (c == "<") {
+    if (c === "<") {
         return tagOpen;
-    } else if (c == EOF) {
-        emit({ type: "EOF" });
+    } else if (c === EOF) {
+        emit({ type: "EOF", });
         return;
     } else {
-        emit({ type: "text", content: c });
+        emit({
+            type: "text",
+            content: c,
+        })
         return data;
     }
 }
 
 function tagOpen(c) {
-    if (c == "/") {
+    if (c === "/") {
         return endTagOpen; // </ 结束标签
     } else if (c.match(/^[a-zA-Z]$/)) {
         currentToken = {
             type: "startTag",
-            tagName: ""
-        };
+            tagName: "",
+        }
         return tagName(c);
     } else {
-        return;
+        return
     }
 }
 
@@ -37,9 +85,9 @@ function endTagOpen(c) {
     if (c.match(/^[a-zA-Z]$/)) {
         currentToken = {
             type: "endTag",
-            tagName: ""
-        };
-        return tagName(c);
+            tagName: "",
+        }
+        return tagName(c)
     } else if (c == ">") {
         // error
     } else if (c == EOF) {
@@ -49,15 +97,16 @@ function endTagOpen(c) {
     }
 }
 
+// 标签Tag解析
 function tagName(c) {
     if (c.match(/^[\t\n\f ]$/)) {
         return beforeAttributeName;
-    } else if (c == "/") {
+    } else if (c === "/") {
         return selfClosingStartTag;
     } else if (c.match(/^[a-zA-Z]$/)) {
         currentToken.tagName += c;
         return tagName;
-    } else if (c == ">") {
+    } else if (c === ">") {
         emit(currentToken);
         return data;
     } else {
@@ -77,20 +126,19 @@ function beforeAttributeName(c) {
             name: "",
             value: ""
         }
-        // 解析html属性
         return attributeName(c);
     }
 }
 
 // 解析html属性
 function attributeName(c) {
-    if (c.match(/^[\t\n\f ]$/) || c == "/" || c == ">" || c == EOF) {
+    if (c.match(/^[\t\n\f ]$/) || c === "/" || c === ">" || c === EOF) {
         return afterAttributeName(c);
-    } else if (c == "=") {
+    } else if (c === "=") {
         return beforeAttributeValue;
-    } else if (c == "\u0000") {
+    } else if (c === "\u0000") {
 
-    } else if (c == "\"" || c == "'" || c == "<") {
+    } else if (c === '"' || c === "'" || c === "<") {
 
     } else {
         currentAttribute.name += c;
@@ -99,99 +147,118 @@ function attributeName(c) {
 }
 
 function beforeAttributeValue(c) {
-    if (c.match(/^[\t\n\f ]$/) || c == "/" || c == ">" || c == EOF) {
+    if (c.match(/^[\t\n\f ]$/) || c === "/" || c === ">" || c === EOF) {
         return beforeAttributeValue;
-    } else if (c == "\"") {
+    } else if (c === "\"") {
         return doubleQuotedAttributeValue;
-    } else if (c == "\'") {
+    } else if (c === "\'") {
         return singleQuotedAttributeValue;
-    } else if (c == ">") {
-        // return data;
+    } else if (c === ">") {
+
     } else {
-        return UnQuotedAttributeValue(c);
+        return UnquotedAttributeValue(c);
     }
 }
 
-// 分析双引号属性
-function doubleQuotedAttributeValue(c) {
-    if (c == "\"") {
-        currentToken[currentAttribute.name] = currentAttribute.value;
-        return afterQuotedAttributeValue;
-    } else if (c == "\u0000") {
 
-    } else if (c == EOF) {
+function afterAttributeName(c) {
+    if (c.match(/^[\t\n\f ]$/)) {
+        return afterAttributeName;
+    } else if (c === "/") {
+        return selfClosingStartTag;
+    } else if (c === "=") {
+        return beforeAttributeValue;
+    } else if (c === ">") {
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        emit(currentToken);
+        return data;
+    } else if (c === EOF) {
 
     } else {
-        currentAttribute.value += c;
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        currentAttribute = {
+            name: "",
+            value: "",
+        }
+        return attributeName(c);
+    }
+}
+
+
+// 分析双引号属性
+function doubleQuotedAttributeValue(c) {
+    if (c === "\"") {
+        currentToken[currentAttribute.name] = currentAttribute.value;
+        return afterQuotedAttributeValue;
+    } else if (c === "\u0000") {
+
+    } else if (c === EOF) {
+
+    } else {
+        currentAttribute.value += c
         return doubleQuotedAttributeValue;
     }
 }
 
 // 分析单引号属性
 function singleQuotedAttributeValue(c) {
-    if (c == "\'") {
+    if (c === "\'") {
         currentToken[currentAttribute.name] = currentAttribute.value;
         return afterQuotedAttributeValue;
-    } else if (c == "\u0000") {
+    } else if (c === "\u0000") {
 
-    } else if (c == EOF) {
+    } else if (c === EOF) {
 
     } else {
-        currentAttribute.value += c;
-        return doubleQuotedAttributeValue;
+        currentAttribute.value += c
+        return singleQuotedAttributeValue;
     }
 }
 
 // 分析无引号属性
-function UnQuotedAttributeValue(c) {
+function UnquotedAttributeValue(c) {
     if (c.match(/^[\t\n\f ]$/)) {
         currentToken[currentAttribute.name] = currentAttribute.value;
-        return beforeAttributeValue;
-    } else if (c == "/") {
+        return beforeAttributeName;
+    } else if (c === "/") {
         currentToken[currentAttribute.name] = currentAttribute.value;
         return selfClosingStartTag;
-    } else if (c == ">") {
+    } else if (c === ">") {
         currentToken[currentAttribute.name] = currentAttribute.value;
         emit(currentToken);
         return data;
-    } else if (c == "\u0000") {
+    } else if (c === "\u0000") {
 
-    } else if (c == "\"" || c == "'" || c == "<" || c == "=" || c == "`") {
+    } else if (c === '"' || c === "'" || c === "<" || c === "=" || c === "`") {
 
-    } else if (c == EOF) {
+    } else if (c === EOF) {
 
     } else {
         currentAttribute.value += c;
-        return UnQuotedAttributeValue;
+        return UnquotedAttributeValue;
     }
 }
 
 function afterQuotedAttributeValue(c) {
     if (c.match(/^[\t\n\f ]$/)) {
         return beforeAttributeName;
-    } else if (c == "/") {
+    } else if (c === "/") {
         return selfClosingStartTag;
-    } else if (c == ">") {
+    } else if (c === ">") {
         currentToken[currentAttribute.name] = currentAttribute.value;
         emit(currentToken);
-        return data;
-    } else if (c == EOF) {
-
+        return data
+    } else if (c === EOF) {
     } else {
         currentAttribute.value += c;
         return doubleQuotedAttributeValue;
     }
 }
 
-function afterAttributeName(c) {
-
-}
-
-
-
 function selfClosingStartTag(c) {
     if (c == ">") {
         currentToken.isSelfClosing = true;
+        emit(currentToken);
         return data;
     } else if (c == "EOF") {
         // error
@@ -207,6 +274,7 @@ function parseHTML(html) {
         state = state(c);
     }
     state = state(EOF);
+    return stack[0];
 }
 
 module.exports = {
