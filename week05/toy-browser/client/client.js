@@ -1,4 +1,5 @@
 const net = require('net');
+const images = require('images');
 const parser = require('./parser');
 
 class Request {
@@ -31,6 +32,7 @@ class Request {
           host: this.host,
           port: this.port
         }, () => {
+          console.log(this.toString());
           connection.write(this.toString());
         })
       }
@@ -57,8 +59,6 @@ class Request {
 ${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r
 \r
 ${this.bodyText}`;
-    // return `${this.method} ${this.path} HTTP/1.1\r
-    // ${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r\n\r\n${this.bodyText}`;
   }
 }
 
@@ -79,10 +79,7 @@ class TrunckedBodyParser {
   receiveChar(char) {
     if (this.current === this.WAITING_LENGTH) {
       if (char === '\r') {
-        if (this.length === 0) {
-          this.isFinished = true;
-        }
-        // this.isFinished = this.length === 0
+        this.isFinished = this.length === 0
         this.current = this.WAITING_LENGTH_LINE_END;
       } else {
         this.length *= 16;
@@ -200,6 +197,31 @@ class ResponseParser {
   }
 }
 
+// 在 viewport 上绘制 element
+function render(viewport, element) {
+  const rgbRegExp = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/;
+
+  if (element.style) {
+    const img = images(element.style.width, element.style.height);
+    if (element.style['background-color']) {
+      const color = element.style['background-color'] || 'rgb(0,0,0)';
+      const result = color.match(rgbRegExp);
+      if (result.length > 0) {
+        let [r, g, b] = result.slice(1);
+        img.fill(Number(r), Number(g), Number(b));
+        viewport.draw(img, element.style.left || 0, element.style.top || 0);
+      }
+    }
+  }
+
+  if (element.children) {
+    for (const child of element.children) {
+      render(viewport, child);
+    }
+  }
+}
+
+
 void async function () {
   let req = new Request({
     method: "POST",
@@ -214,7 +236,17 @@ void async function () {
     }
   });
   let res = await req.send();
-  console.log("response:", res.body);
-  const dom = parser.parseHTML(res.body);
-  console.log(JSON.stringify(dom, null, "   "));
+
+  let dom = parser.parseHTML(res.body);
+
+  let viewport = images(800, 600); // 创建一个视口
+
+  const body = dom.children[0].children[3];
+  const container = body.children[1];
+  const myId = container.children[1];
+  const c1 = container.children[3];
+
+  render(viewport, dom);
+  viewport.save('viewport.jpg');
+  // console.log(JSON.stringify(dom, null, "   "));
 }();
