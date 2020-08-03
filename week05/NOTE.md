@@ -19,3 +19,9 @@
   - 四元组 [ `inline`, `#id`, `.class`, `tag` ]
   - 比较大小的规则是从高到底逐级比较，有结果后忽略更低级别的数值
   - 参考资料 [specifishity.com](https://specifishity.com/)
+
+## DOM绘制
+
+利用 npm [images](https://www.npmjs.com/package/images)包，`render` DOM 树
+
+这周比较赶，有机会重温一遍！
