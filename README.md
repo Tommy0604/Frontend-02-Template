@@ -1,6 +1,8 @@
  # 极客大学「前端进阶训练营-第2期」作业提交仓库
 
+## 极客大学作业链接
 
+[这里](https://github.com/GeekUniversity/Frontend-02-Template/issues)
 
 ## 仓库目录结构说明
 
