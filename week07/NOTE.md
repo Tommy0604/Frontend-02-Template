@@ -20,6 +20,46 @@ CSS选择器选中的__Element__（**或伪元素**），在排版时可能产�
 
 *****
 
+### CSS 排版: Box
+
+- DOM 树中包括
+
+  - 元素
+  - 其他类型节点 (如文本、CDATA、注释、Process Instruction、DTD 等)
+
+- CSS 选择器选中元素，排版时产生 box (1 个或多个)
+- 一个元素，多个 box 的情况：如 inline 折行，或伪元素 ::before ::after
+- Box 是排版的基本单位
+- Box model
+  - margin
+  - border
+  - padding
+- box-sizing 属性影响计算方式
+  - box-sizing: border-box; - box 的 width/height 是指 border(含) 以内的部分
+  - box-sizing: content-box; - box 的 width/height 是指 content 部分的尺寸
+
+### CSS 排版: Normal Flow
+
+- 排版模式断代：Normal Flow, flex, grid, CSS Houdini
+- CSS 排版的对象：文字 和 box
+- 正常流对应的隐喻：纸面印刷品
+
+  - 从左到右
+  - 一行内的内容对齐
+  - 行满后换新行
+
+- 正常流排版过程步骤
+
+  - 收集文字和盒，放进“行”
+  - 计算 行 内容的排布
+  - 计算 行 的排布
+
+- 主要元素
+
+  - line-box - 行内部产生 inline-level formatting context
+  - inline-box
+  - block-level box - 盒内部产生 block-level formatting context
+
 ### 正常流
 
 >正常流是一种符合“现代人”书写直觉的排版方式。正常流分为行内格式上下文(IFC)和块级格式上下文(BFC)
@@ -82,3 +122,25 @@ BFC分三种：
   - C, M, Y 分别是 R, G, B, 的补色，颜料 3 原色是减色混合
   - HSL - Lightness 有符号，负值变暗，正值变亮
   - HSV - Value 无符号，0 是最暗，最大值是最亮
+
+### CSS 动画与绘制: 绘制
+
+- 三类图形元素
+
+  - 几何图形
+    - `border`
+    - `box-shadow`
+    - `border-radius`
+  - 文字
+    - `font-*` - 根据字体绘制 glyph
+    - `text-decoration`
+  - 位图
+    - `background-image` - 含渐变等
+
+- 实现依赖图形库
+
+  - Android 等平台 - google/skia
+  - Windows - GDI
+  - 演示实例 - Fragment Shader, [vue-logo.frag](https://github.com/wintercn/glsl-vue-loader/blob/master/samples/vue-cli-example/src/components/vue-logo.frag)
+
+- 推荐用 SVG 绘制矢量图形，data uri 格式嵌入 SVG 代码
