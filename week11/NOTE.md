@@ -8,8 +8,11 @@
 
 ``` js
  let po = new Proxy(obj, {
+    get(obj, prop) {
+        console.log(obj, prop);
+    },
     set(obj, prop, val) {
-      console.log(obj, prop, val);
+        console.log(obj, prop, val);
     }
   })
 ```
